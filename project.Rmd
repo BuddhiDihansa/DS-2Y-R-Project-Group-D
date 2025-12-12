@@ -1,4 +1,36 @@
+
 ```{r}
-library(tidyverse)
+remove.packages(c("ggplot2","dplyr","readr","survival","survminer"))
+
 ```
+
+
+```{r}
+# Make sure R installs only binary versions
+options(pkgType = "binary")
+
+```
+
+```{r}
+install.packages("ggplot2")     # Binary version
+install.packages("dplyr")       # Binary version
+install.packages("readr")       # Binary version
+install.packages("survival")    # Binary version
+install.packages("survminer")   # Binary version
+
+```
+
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(survival)
+library(survminer)
+
+
+```
+
+
+
 
