@@ -1,4 +1,4 @@
-##Load library
+## Load library
 
 ```{r}
 library(readr)
@@ -16,5 +16,11 @@ clinical_data <- read_tsv("msk_chord_2024_clinical_data (2).tsv")
 
 ```
 
+## Data Cleaning And Pre-Processing
+
+## Detect Missing Value
+```{r}
+colSums(is.na(clinical_data))
+```
 
 
