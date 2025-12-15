@@ -24,3 +24,17 @@ colSums(is.na(clinical_data))
 ```
 
 
+## Remove Rows with Critical Missing Values
+
+```{r}
+clinical_data_clean <- clinical_data %>%
+  filter(
+    !is.na(`Current Age`),
+    !is.na(Sex),
+    !is.na(`Cancer Type`),
+    !is.na(`Stage (Highest Recorded)`),
+    !is.na(`Overall Survival Status`)
+  )
+```
+
+
