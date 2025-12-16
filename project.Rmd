@@ -38,3 +38,14 @@ clinical_data_clean <- clinical_data %>%
 ```
 
 
+## Clean NLP-Derived fields
+
+```{r}
+clinical_data_clean <- clinical_data_clean %>%
+  mutate(
+    `Cancer Type` = trimws(tolower(`Cancer Type`)),
+    `Stage (Highest Recorded)`= trimws(toupper(`Stage (Highest Recorded)`))
+  )
+```
+
+
