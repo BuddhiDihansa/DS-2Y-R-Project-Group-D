@@ -49,11 +49,29 @@ clinical_data_clean <- clinical_data_clean %>%
 ```
 
 
+## Create Treatment Response
+
+```{r}
+clinical_data_clean <- clinical_data_clean %>%
+  mutate(
+    survival_status_clean = tolower(trimws(`Overall Survival Status`)),
+    treatment_response = ifelse(
+      grepl("alive|living", survival_status_clean),
+      "Good Response",
+      "Poor Response"
+    )
+  )
+
+
+```
+
 ## Data Manipulation
 ## Accessing Columns
 
 ```{r}
-clinical_data_clean$age
+clinical_data_clean$`Current Age`
 clinical_data_clean$treatment_response
+
 ```
+
 
