@@ -74,4 +74,10 @@ clinical_data_clean$treatment_response
 
 ```
 
+## Subsetting
+
+```{r}
+subset(clinical_data_clean, Sex == "Female")
+```
+
 
