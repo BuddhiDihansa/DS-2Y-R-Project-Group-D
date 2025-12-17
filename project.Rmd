@@ -49,3 +49,11 @@ clinical_data_clean <- clinical_data_clean %>%
 ```
 
 
+## Data Manipulation
+## Accessing Columns
+
+```{r}
+clinical_data_clean$age
+clinical_data_clean$treatment_response
+```
+
