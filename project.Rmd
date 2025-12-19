@@ -80,4 +80,10 @@ clinical_data_clean$treatment_response
 subset(clinical_data_clean, Sex == "Female")
 ```
 
+## Aggregation
+```{r}
+clinical_data_clean %>%
+  group_by(`Stage (Highest Recorded)`, treatment_response) %>%
+  summarise(count = n())
+```
 
