@@ -97,5 +97,22 @@ ggplot(clinical_data_clean,aes(x = `Current Age`, fill = treatment_response)
   geom_histogram(position = "identity", alpha = 0.6, bins = 20)+
   labs(title = "Age vs Treatment Response")
 ```
+## Gender vs Treatment Response
+```{r}
+ggplot(
+  clinical_data_clean,
+       aes(x = Sex, fill = treatment_response)) +
+  geom_bar(position = "fill") +
+  labs(title = "Treatment Response by Gender",
+       y = "Proportion")
+
+```
+
+
+
+
+
+
+
 
 
