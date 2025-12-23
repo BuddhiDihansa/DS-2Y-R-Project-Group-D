@@ -90,7 +90,7 @@ clinical_data_clean %>%
 
 ## Data Visualization
 
-## Age vs Treatment
+## Age vs Treatment Response
 ```{r}
 ggplot(clinical_data_clean,aes(x = `Current Age`, fill = treatment_response)
        )+
@@ -108,8 +108,15 @@ ggplot(
 
 ```
 
-
-
+## Tumor Stage vs Treatment Response
+```{r}
+ggplot(
+  clinical_data_clean,
+  aes(x = `Stage (Highest Recorded)`, fill = treatment_response)
+)+
+  geom_bar(position = "fill")+
+  labs(title = "Treatment Response by Tumor Stage")
+```
 
 
 
