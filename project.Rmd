@@ -118,6 +118,29 @@ ggplot(
   labs(title = "Treatment Response by Tumor Stage")
 ```
 
+## Create binary numeric response
+```{r}
+## Create binary treatment_response for logistic regression
+clinical_data_clean <- clinical_data_clean %>%
+  mutate(
+    treatment_response_bin = ifelse(treatment_response == "Good Response", 1, 0)
+  )
+
+```
+
+## Create binary numeric response
+```{r}
+model <- glm(
+  treatment_response_bin ~ `Current Age` + Sex + `Stage (Highest Recorded)`,
+  data = clinical_data_clean,
+  family = binomial
+)
+
+summary(model)
+
+```
+
+
 ##Pipe Operator(%>%)
 ```{r}
 clinical_data_clean %>%
