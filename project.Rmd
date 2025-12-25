@@ -118,6 +118,14 @@ ggplot(
   labs(title = "Treatment Response by Tumor Stage")
 ```
 
+##Pipe Operator(%>%)
+```{r}
+clinical_data_clean %>%
+  filter(`Current Age` > 40) %>%
+  select(`Current Age`, Sex, `Cancer Type`, `Stage (Highest Recorded)`, treatment_response) %>%
+  mutate(age_group = ifelse(`Current Age` < 60, "Middle", "Older")) %>%
+  arrange(`Stage (Highest Recorded)`)
+```
 
 
 
