@@ -131,7 +131,7 @@ clinical_data_clean <- clinical_data_clean %>%
 ## Create binary numeric response
 ```{r}
 model <- glm(
-  treatment_response_bin ~ `Current Age` + Sex + `Stage (Highest Recorded)`,
+  treatment_response_bin ~ `Current Age` + Sex + `Stage (Highest Recorded)`+ `Cancer Type`,
   data = clinical_data_clean,
   family = binomial
 )
