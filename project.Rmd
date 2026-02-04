@@ -4,8 +4,6 @@
 library(readr)
 library(dplyr)
 library(ggplot2)
-library(survival)
-library(survminer)
 
 ```
 
@@ -44,7 +42,10 @@ clinical_data_clean <- clinical_data %>%
 clinical_data_clean <- clinical_data_clean %>%
   mutate(
     `Cancer Type` = trimws(tolower(`Cancer Type`)),
-    `Stage (Highest Recorded)`= trimws(toupper(`Stage (Highest Recorded)`))
+    `Stage (Highest Recorded)`= trimws(toupper(`Stage (Highest Recorded)`)),
+    `Clinical Summary`=trimws(`Clinical Summary`),
+    `Smoking History (NLP)`= trimws(`Smoking History (NLP)`),
+    Sex = factor(Sex)
   )
 ```
 
@@ -54,25 +55,19 @@ clinical_data_clean <- clinical_data_clean %>%
 ```{r}
 clinical_data_clean <- clinical_data_clean %>%
   mutate(
-    survival_status_clean = tolower(trimws(`Overall Survival Status`)),
-    treatment_response = ifelse(
-      grepl("alive|living", survival_status_clean),
-      "Good Response",
-      "Poor Response"
-    )
+    response_score =
+      ifelse(grepl("LIVING",`Overall Survival Status`, ignore.case = TRUE), 1, 0) +
+      ifelse(`Clinical Summary`%in% c("Localized", "In Situ"), 1, 0) +
+      ifelse(is.na(`Metastatic Site`), 1, 0) +
+      ifelse(!is.na(`Fraction Genome Altered`) & `Fraction Genome Altered` < 0.2, 1, 0) +
+      ifelse(grepl("Non-Smoker|Never",`Smoking History (NLP)`,ignore.case = TRUE), 1, 0),
+    treatment_response = ifelse(response_score >= 3, "Good Response", "Poor Response"),
+    treatment_response_bin = ifelse(treatment_response == "Good Response", 1, 0)
   )
 
 
 ```
 
-## Data Manipulation
-## Accessing Columns
-
-```{r}
-clinical_data_clean$`Current Age`
-clinical_data_clean$treatment_response
-
-```
 
 ## Subsetting
 
@@ -80,11 +75,12 @@ clinical_data_clean$treatment_response
 subset(clinical_data_clean, Sex == "Female")
 ```
 
-## Aggregation
+## EDA
 ```{r}
 clinical_data_clean %>%
   group_by(`Stage (Highest Recorded)`, treatment_response) %>%
-  summarise(count = n())
+  summarise(count=n(),.groups="drop")
+  
 ```
 
 
@@ -95,6 +91,7 @@ clinical_data_clean %>%
 ggplot(clinical_data_clean,aes(x = `Current Age`, fill = treatment_response)
        )+
   geom_histogram(position = "identity", alpha = 0.6, bins = 20)+
+  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
   labs(title = "Age vs Treatment Response")
 ```
 ## Gender vs Treatment Response
@@ -103,6 +100,7 @@ ggplot(
   clinical_data_clean,
        aes(x = Sex, fill = treatment_response)) +
   geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
   labs(title = "Treatment Response by Gender",
        y = "Proportion")
 
@@ -115,12 +113,12 @@ ggplot(
   aes(x = `Stage (Highest Recorded)`, fill = treatment_response)
 )+
   geom_bar(position = "fill")+
+  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
   labs(title = "Treatment Response by Tumor Stage")
 ```
 
-## Create binary numeric response
+##Create binary numeric response
 ```{r}
-## Create binary treatment_response for logistic regression
 clinical_data_clean <- clinical_data_clean %>%
   mutate(
     treatment_response_bin = ifelse(treatment_response == "Good Response", 1, 0)
@@ -128,11 +126,24 @@ clinical_data_clean <- clinical_data_clean %>%
 
 ```
 
-## Create binary numeric response
+
+
+## Train-Test Split
+```{r}
+set.seed(123)
+index <- sample(seq_len(nrow(clinical_data_clean)),
+                size = 0.7*nrow(clinical_data_clean))
+
+train <- clinical_data_clean[index,]
+test <- clinical_data_clean[-index,]
+```
+`
+
+## Logistic Regression Model
 ```{r}
 model <- glm(
   treatment_response_bin ~ `Current Age` + Sex + `Stage (Highest Recorded)`+ `Cancer Type`,
-  data = clinical_data_clean,
+  data = train,
   family = binomial
 )
 
@@ -151,6 +162,14 @@ clinical_data_clean %>%
 ```
 
 
+## Summary(model)
+```{r}
+predicted_probs <- predict(model, newdata = test, type = "response")
+predicted_class <- ifelse(predicted_probs > 0.5, 1, 0)
+accuracy <- mean(predicted_class == test$treatment_response_bin)
+
+cat("Final Model Accuracy:", round(accuracy * 100, 2), "%\n")
+```
 
 
 
