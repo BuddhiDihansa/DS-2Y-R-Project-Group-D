@@ -1,175 +1,225 @@
+
 ## Load library
 
 ```{r}
-library(readr)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 
 ```
 
 ## Load dataset
 ```{r}
 clinical_data <- read_tsv("msk_chord_2024_clinical_data (2).tsv")
-
+cat("Total Rows:", nrow(clinical_data), "\n")
+cat("Total Columns:", ncol(clinical_data), "\n")
 
 ```
 
-## Data Cleaning And Pre-Processing
-
-## Detect Missing Value
+## DATA CLEANING
 ```{r}
-colSums(is.na(clinical_data))
-```
-
-
-## Remove Rows with Critical Missing Values
-
-```{r}
-clinical_data_clean <- clinical_data %>%
-  filter(
-    !is.na(`Current Age`),
-    !is.na(Sex),
-    !is.na(`Cancer Type`),
-    !is.na(`Stage (Highest Recorded)`),
-    !is.na(`Overall Survival Status`)
-  )
-```
-
-
-## Clean NLP-Derived fields
-
-```{r}
-clinical_data_clean <- clinical_data_clean %>%
+clean_df <- clinical_data %>%
+  select(
+    Age = `Current Age`, Sex, Race, Ethnicity,
+    Cancer_Type = `Cancer Type`, Stage = `Stage (Highest Recorded)`,
+    Tumor_Site = `Primary Tumor Site`, Sample_Type = `Sample Type`,
+    Smoking = `Smoking History (NLP)`, Prior_Tx = `Prior Treatment to MSK (NLP)`,
+    TMB = `TMB (nonsynonymous)`, MSI = `MSI Score`,
+    FGA = `Fraction Genome Altered`, Purity = `Tumor Purity`,
+    OS_Months = `Overall Survival (Months)`
+  ) %>%
   mutate(
-    `Cancer Type` = trimws(tolower(`Cancer Type`)),
-    `Stage (Highest Recorded)`= trimws(toupper(`Stage (Highest Recorded)`)),
-    `Clinical Summary`=trimws(`Clinical Summary`),
-    `Smoking History (NLP)`= trimws(`Smoking History (NLP)`),
-    Sex = factor(Sex)
-  )
-```
-
-
-## Create Treatment Response
-
-```{r}
-clinical_data_clean <- clinical_data_clean %>%
-  mutate(
-    response_score =
-      ifelse(grepl("LIVING",`Overall Survival Status`, ignore.case = TRUE), 1, 0) +
-      ifelse(`Clinical Summary`%in% c("Localized", "In Situ"), 1, 0) +
-      ifelse(is.na(`Metastatic Site`), 1, 0) +
-      ifelse(!is.na(`Fraction Genome Altered`) & `Fraction Genome Altered` < 0.2, 1, 0) +
-      ifelse(grepl("Non-Smoker|Never",`Smoking History (NLP)`,ignore.case = TRUE), 1, 0),
-    treatment_response = ifelse(response_score >= 3, "Good Response", "Poor Response"),
-    treatment_response_bin = ifelse(treatment_response == "Good Response", 1, 0)
+    across(c(Sex, Race, Ethnicity, Stage, Tumor_Site, Sample_Type, Smoking, Prior_Tx), 
+           ~replace_na(as.character(.), "Not_Reported")),
+    across(c(Sex, Race, Ethnicity, Stage, Tumor_Site, Sample_Type, Smoking, Prior_Tx), 
+           ~ifelse(. %in% c("Unknown", "Pt Refused To Answer", ""), "Not_Reported", .)),
+    
+    Age = replace_na(as.numeric(Age), median(as.numeric(Age), na.rm=TRUE)),
+    TMB = replace_na(as.numeric(TMB), median(as.numeric(TMB), na.rm=TRUE)),
+    MSI = replace_na(ifelse(as.numeric(MSI) < 0, NA, as.numeric(MSI)), median(as.numeric(MSI), na.rm=TRUE)),
+    FGA = replace_na(as.numeric(FGA), median(as.numeric(FGA), na.rm=TRUE)),
+    Purity = replace_na(as.numeric(Purity), median(as.numeric(Purity), na.rm=TRUE))
   )
 
-
 ```
 
-
-## Subsetting
+## Create Proxy Variable
 
 ```{r}
-subset(clinical_data_clean, Sex == "Female")
+med_val <- median(clean_df$OS_Months, na.rm=TRUE)
+clean_df$Response <- factor(ifelse(clean_df$OS_Months >= med_val, "Good", "Poor"))
 ```
 
-## EDA
+## Numeric Variable Plots vs Response
 ```{r}
-clinical_data_clean %>%
-  group_by(`Stage (Highest Recorded)`, treatment_response) %>%
-  summarise(count=n(),.groups="drop")
-  
+numeric_vars <- c("Age","TMB","MSI","FGA","Purity")
 ```
 
-
-## Data Visualization
-
-## Age vs Treatment Response
+## Age vs Response
 ```{r}
-ggplot(clinical_data_clean,aes(x = `Current Age`, fill = treatment_response)
-       )+
-  geom_histogram(position = "identity", alpha = 0.6, bins = 20)+
-  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
-  labs(title = "Age vs Treatment Response")
+ggplot(clean_df, aes(x = Response, y = Age, fill = Response)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Age Distribution by Response") +
+  theme_minimal()
 ```
-## Gender vs Treatment Response
+
 ```{r}
-ggplot(
-  clinical_data_clean,
-       aes(x = Sex, fill = treatment_response)) +
+ggplot(clean_df, aes(x = Age, fill = Response)) +
+  geom_density(alpha = 0.4) +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Density of Age by Response") +
+  theme_minimal()
+```
+## TMB vs Response
+```{r}
+ggplot(clean_df, aes(x = Response, y = TMB, fill = Response)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "TMB Distribution by Response") +
+  theme_minimal()
+```
+```{r}
+ggplot(clean_df, aes(x = TMB, fill = Response)) +
+  geom_density(alpha = 0.4) +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Density of TMB by Response") +
+  theme_minimal()
+```
+## MSI vs Response
+```{r}
+ggplot(clean_df, aes(x = Response, y = MSI, fill = Response)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "MSI Distribution by Response") +
+  theme_minimal()
+```
+```{r}
+ggplot(clean_df, aes(x = MSI, fill = Response)) +
+  geom_density(alpha = 0.4) +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Density of MSI by Response") +
+  theme_minimal()
+```
+## FGA vs Response
+```{r}
+ggplot(clean_df, aes(x = Response, y = FGA, fill = Response)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Good" = "#2980B9", "Poor" = "#F39C12")) +
+  labs(title = "FGA Distribution by Response") +
+  theme_minimal()
+```
+
+## Purity vs Response
+```{r}
+ggplot(clean_df, aes(x = Response, y = Purity, fill = Response)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Purity Distribution by Response") +
+  theme_minimal()
+```
+## Categorical Variable Plots vs Response
+```{r}
+categorical_vars <- c("Sex","Stage","Cancer_Type","Tumor_Site","Smoking","Prior_Tx")
+```
+## Sex vs Response
+```{r}
+prop_sex <- prop.table(table(clean_df$Sex, clean_df$Response), margin=1)
+print(round(prop_sex, 2))
+
+ggplot(clean_df, aes(x = Sex, fill = Response)) +
   geom_bar(position = "fill") +
-  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
-  labs(title = "Treatment Response by Gender",
-       y = "Proportion")
+  scale_fill_manual(values = c("Good" = "#3498DB", "Poor" = "#E91E63")) +
+  labs(title = "Proportion of Response by Sex", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-
-## Tumor Stage vs Treatment Response
+## ## Stage vs Response
 ```{r}
-ggplot(
-  clinical_data_clean,
-  aes(x = `Stage (Highest Recorded)`, fill = treatment_response)
-)+
-  geom_bar(position = "fill")+
-  scale_fill_manual(values = c("Good Response" = "blue", "Poor Response" = "gray")) +
-  labs(title = "Treatment Response by Tumor Stage")
+prop_stage <- prop.table(table(clean_df$Stage, clean_df$Response), margin=1)
+print(round(prop_stage, 2))
+
+ggplot(clean_df, aes(x = Stage, fill = Response)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Proportion of Response by Stage", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+## Cancer_Type vs Response
+```{r}
+prop_cancer <- prop.table(table(clean_df$Cancer_Type, clean_df$Response), margin=1)
+print(round(prop_cancer, 2))
+
+ggplot(clean_df, aes(x = Cancer_Type, fill = Response)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Proportion of Response by Cancer Type", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+## Tumor_Site vs Response
+```{r}
+prop_tumor <- prop.table(table(clean_df$Tumor_Site, clean_df$Response), margin=1)
+print(round(prop_tumor, 2))
+
+ggplot(clean_df, aes(x = Tumor_Site, fill = Response)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Proportion of Response by Tumor Site", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+## Smoking vs Response
+```{r}
+prop_smoke <- prop.table(table(clean_df$Smoking, clean_df$Response), margin=1)
+print(round(prop_smoke, 2))
+
+ggplot(clean_df, aes(x = Smoking, fill = Response)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Proportion of Response by Smoking History", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+## Prior_Tx vs Response
+```{r}
+prop_tx <- prop.table(table(clean_df$Prior_Tx, clean_df$Response), margin=1)
+print(round(prop_tx, 2))
+
+ggplot(clean_df, aes(x = Prior_Tx, fill = Response)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Proportion of Response by Prior Treatment", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-##Create binary numeric response
+
+## Summary Statistics Table
 ```{r}
-clinical_data_clean <- clinical_data_clean %>%
-  mutate(
-    treatment_response_bin = ifelse(treatment_response == "Good Response", 1, 0)
+summary_table <- clean_df %>%
+  group_by(Response) %>%
+  summarise(
+    Count = n(),
+    Mean_Age = mean(Age, na.rm=TRUE),
+    Median_TMB = median(TMB, na.rm=TRUE),
+    Median_MSI = median(MSI, na.rm=TRUE),
+    Median_FGA = median(FGA, na.rm=TRUE),
+    Median_Purity = median(Purity, na.rm=TRUE)
   )
 
+print(summary_table)
 ```
 
-
-
-## Train-Test Split
+## Categorical variable proportion table
 ```{r}
-set.seed(123)
-index <- sample(seq_len(nrow(clinical_data_clean)),
-                size = 0.7*nrow(clinical_data_clean))
-
-train <- clinical_data_clean[index,]
-test <- clinical_data_clean[-index,]
-```
-`
-
-## Logistic Regression Model
-```{r}
-model <- glm(
-  treatment_response_bin ~ `Current Age` + Sex + `Stage (Highest Recorded)`+ `Cancer Type`,
-  data = train,
-  family = binomial
-)
-
-summary(model)
+## Proportion table for categorical variables
+categorical_vars <- c("Sex","Stage","Cancer_Type","Tumor_Site","Smoking","Prior_Tx")
+for (var in categorical_vars) {
+  cat("\n\n---", var, "---\n")
+  print(prop.table(table(clean_df[[var]], clean_df$Response), margin=2))
+}
 
 ```
-
-
-##Pipe Operator(%>%)
-```{r}
-clinical_data_clean %>%
-  filter(`Current Age` > 40) %>%
-  select(`Current Age`, Sex, `Cancer Type`, `Stage (Highest Recorded)`, treatment_response) %>%
-  mutate(age_group = ifelse(`Current Age` < 60, "Middle", "Older")) %>%
-  arrange(`Stage (Highest Recorded)`)
-```
-
-
-## Summary(model)
-```{r}
-predicted_probs <- predict(model, newdata = test, type = "response")
-predicted_class <- ifelse(predicted_probs > 0.5, 1, 0)
-accuracy <- mean(predicted_class == test$treatment_response_bin)
-
-cat("Final Model Accuracy:", round(accuracy * 100, 2), "%\n")
-```
-
 
 
