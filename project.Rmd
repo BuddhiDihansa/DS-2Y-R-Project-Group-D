@@ -193,6 +193,28 @@ ggplot(clean_df, aes(x = Prior_Tx, fill = Response)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+## Stage vs FGA
+```{r}
+ggplot(clean_df, aes(x = Stage, y = FGA, fill = Stage)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  labs(title = "Genomic Instability (FGA) Across Tumor Stages",
+       subtitle = "Does the genome become more unstable as cancer progresses?",
+       x = "Cancer Stage", y = "Fraction Genome Altered (FGA)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Prior Treatment vs FGA
+
+
+```{r}
+ggplot(clean_df, aes(x = Prior_Tx, y = FGA, fill = Response)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Good" = "#27AE60", "Poor" = "#C0392B")) +
+  labs(title = "Impact of Prior Treatment on Genomic Stability and Response",
+       x = "Prior Treatment to MSK", y = "Fraction Genome Altered (FGA)") +
+  theme_minimal()
+```
 
 
 ## Summary Statistics Table
@@ -221,5 +243,4 @@ for (var in categorical_vars) {
 }
 
 ```
-
 
