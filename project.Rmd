@@ -232,7 +232,6 @@ summary_table <- clean_df %>%
 
 print(summary_table)
 ```
-
 ## Categorical variable proportion table
 ```{r}
 ## Proportion table for categorical variables
